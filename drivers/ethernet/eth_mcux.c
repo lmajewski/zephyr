@@ -36,8 +36,13 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #define PTP_INST_NODEID(n) DT_CHILD(DT_DRV_INST(n), ptp)
 #endif
 
+#if defined(CONFIG_NET_DSA)
+#include <net/dsa.h>
+#endif
+
 #include "fsl_enet.h"
 #include "fsl_phy.h"
+
 #ifdef CONFIG_NET_POWER_MANAGEMENT
 #include "fsl_clock.h"
 #include <drivers/clock_control.h>
@@ -711,7 +716,7 @@ static bool eth_get_ptp_data(struct net_if *iface, struct net_pkt *pkt,
 }
 #endif /* CONFIG_PTP_CLOCK_MCUX */
 
-static int eth_tx(const struct device *dev, struct net_pkt *pkt)
+int eth_tx(const struct device *dev, struct net_pkt *pkt)
 {
 	struct eth_context *context = dev->data;
 	uint16_t total_len = net_pkt_get_len(pkt);
@@ -1187,6 +1192,9 @@ static enum ethernet_hw_caps eth_mcux_get_capabilities(const struct device *dev)
 #if defined(CONFIG_PTP_CLOCK_MCUX)
 		ETHERNET_PTP |
 #endif
+#if defined(CONFIG_NET_DSA)
+		ETHERNET_DSA_MASTER_PORT |
+#endif
 #if defined(CONFIG_ETH_MCUX_HW_ACCELERATION)
 		ETHERNET_HW_TX_CHKSUM_OFFLOAD |
 		ETHERNET_HW_RX_CHKSUM_OFFLOAD |
@@ -1210,7 +1218,11 @@ static const struct ethernet_api api_funcs = {
 	.get_ptp_clock		= eth_mcux_get_ptp_clock,
 #endif
 	.get_capabilities	= eth_mcux_get_capabilities,
+#if defined(CONFIG_NET_DSA)
+	.send                   = dsa_tx,
+#else
 	.send			= eth_tx,
+#endif
 };
 
 #if defined(CONFIG_PTP_CLOCK_MCUX)
