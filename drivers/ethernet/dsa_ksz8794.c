@@ -942,4 +942,4 @@ static struct dsa_context dsa_0_context = {
 	.sw_write = dsa_write_reg,
 };
 
-DT_INST_FOREACH_CHILD(0, NET_SLAVE_DEVICE_INIT_INSTANCE)
+DT_INST_FOREACH_CHILD(0, NET_SLAVE_DEVICE_INIT_INSTANCE);
