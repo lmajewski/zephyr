@@ -4,6 +4,15 @@
 #               Lukasz Majewski <lukma@denx.de>
 # SPDX-License-Identifier: Apache-2.0
 
+menuconfig NET_DSA
+	bool "Distributed Switch Architecture support"
+	depends on NETWORKING
+	help
+	  Enable Distributed Switch Architecture support. For now it
+	  only supports Kinetics ENET driver.
+
+if NET_DSA
+
 config DSA_KSZ8794
 	bool "Enable support for KSZ8794"
 	help
@@ -13,3 +22,5 @@ config DSA_KSZ8794_TAIL_TAGGING
 	bool "Enable support for tail tagging on KSZ8794"
 	help
 	  Add support for tail tagging on KSZ8794 DSA device.
+
+endif # NET_DSA

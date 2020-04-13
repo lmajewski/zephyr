@@ -29,6 +29,10 @@
 #include <net/net_if.h>
 #include <net/ethernet_vlan.h>
 
+#if defined(CONFIG_NET_DSA)
+#include <net/dsa.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -78,7 +82,19 @@ struct net_eth_addr {
 
 #define NET_ETH_MINIMAL_FRAME_SIZE	60
 #define NET_ETH_MTU			1500
-#define NET_ETH_MAX_FRAME_SIZE	(NET_ETH_MTU + sizeof(struct net_eth_hdr))
+#define _NET_ETH_MAX_FRAME_SIZE	(NET_ETH_MTU + sizeof(struct net_eth_hdr))
+#define _NET_ETH_MAX_HDR_SIZE		(sizeof(struct net_eth_hdr))
+/*
+ * Extend the max frame size for DSA (KSZ8794) by one byte (to 1519) to
+ * store tail tag.
+ */
+#if defined(CONFIG_NET_DSA)
+#define NET_ETH_MAX_FRAME_SIZE (_NET_ETH_MAX_FRAME_SIZE+_DSA_TAG_SIZE)
+#define NET_ETH_MAX_HDR_SIZE (_NET_ETH_MAX_HDR_SIZE+_DSA_TAG_SIZE)
+#else
+#define NET_ETH_MAX_FRAME_SIZE (_NET_ETH_MAX_FRAME_SIZE)
+#define NET_ETH_MAX_HDR_SIZE (_NET_ETH_MAX_HDR_SIZE)
+#endif
 
 #define NET_ETH_VLAN_HDR_SIZE	4
 
@@ -130,6 +146,10 @@ enum ethernet_hw_caps {
 
 	/** VLAN Tag stripping */
 	ETHERNET_HW_VLAN_TAG_STRIP	= BIT(14),
+
+	/** DSA switch */
+	ETHERNET_DSA_SLAVE_PORT	= BIT(15),
+	ETHERNET_DSA_MASTER_PORT	= BIT(16),
 };
 
 /** @cond INTERNAL_HIDDEN */
@@ -379,6 +399,15 @@ struct ethernet_context {
 	int8_t vlan_enabled;
 #endif
 
+#if defined(CONFIG_NET_DSA)
+	/** Switch physical port number */
+	uint8_t dsa_port_idx;
+
+	/** DSA RX callback function - for custom processing - like e.g.
+	 * redirecting packets when MAC address is caught
+	 */
+	net_dsa_recv_cb_t cb;
+#endif
 	/** Is this context already initialized */
 	bool is_init;
 };
