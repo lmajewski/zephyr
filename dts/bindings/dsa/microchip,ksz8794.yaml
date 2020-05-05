@@ -1,0 +1,42 @@
+# Copyright (c) 2020 DENX Software Engineering GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+    KSZ8794 ethernet switch with SPI interface
+
+compatible: "microchip,ksz8794"
+
+include: [spi-device.yaml]
+properties:
+    dsa-master-port:
+       type: phandle
+       required: false
+       description: Phandle to master port.
+    dsa-slave-ports:
+       type: int
+       required: false
+       description: Number of slave ports on the switch
+    spi-cpha:
+       type: boolean
+       required: false
+       description: |
+          Set to indicate phase starts with asserted half-phase (CPHA=1).
+          For this driver using this property requires also using cpol.
+    spi-cpol:
+        type: boolean
+        required: false
+        description: |
+          Set to indicate clock leading edge is falling (CPOL=1).
+          For this driver using this property requires also using cpha.
+
+child-binding:
+    description: Praperties of slave port
+    properties:
+        label:
+            type: string
+            required: true
+        local-mac-address:
+            type: uint8-array
+            required: false
+            description: |
+                Specifies the MAC address that was assigned to the port
