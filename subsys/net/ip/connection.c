@@ -597,8 +597,12 @@ enum net_verdict net_conn_input(struct net_pkt *pkt,
 			continue;
 		}
 
-		if (IS_ENABLED(CONFIG_NET_UDP) ||
-		    IS_ENABLED(CONFIG_NET_TCP)) {
+		if ((IS_ENABLED(CONFIG_NET_UDP) ||
+		     IS_ENABLED(CONFIG_NET_TCP))
+#if defined(CONFIG_NET_DSA)
+		    && !net_dsa_recv(pkt_iface, pkt)
+#endif
+		    ) {
 			if (net_sin(&conn->remote_addr)->sin_port) {
 				if (net_sin(&conn->remote_addr)->sin_port !=
 				    src_port) {
