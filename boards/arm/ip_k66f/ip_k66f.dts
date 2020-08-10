@@ -93,6 +93,7 @@
 
 &enet {
 	status = "okay";
+	local-mac-address = [00 00 12 13 00 10];
 
 	fixed-link {
 		speed = <100>;
@@ -104,6 +105,34 @@
 	status = "okay";
 
 	clock-frequency = <44000000>;
+
+	ksz8794: dsa@0 {
+		compatible = "microchip,ksz8794";
+		reg = <0>;
+
+		label = "DSA_0";
+		spi-max-frequency = <44000000>;
+
+		spi-cpol;
+		spi-cpha;
+		dsa-master-port = <&enet>;
+		dsa-slave-ports = <3>;
+
+		lan3: lan_3 {
+			label = "lan3";
+			local-mac-address = [00 00 12 13 00 37];
+		};
+
+		lan2: lan_2 {
+			label = "lan2";
+			local-mac-address = [00 00 12 13 00 27];
+		};
+
+		lan1: lan_1 {
+			label = "lan1";
+			local-mac-address = [00 00 12 13 00 17];
+		};
+	};
 };
 
 &gpioa {

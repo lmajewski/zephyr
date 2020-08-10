@@ -39,6 +39,13 @@ config ETH_MCUX_NO_PHY_SMI
 
 endif # NETWORKING
 
+if NET_DSA
+
+config DSA_KSZ8794
+	default y if SPI
+
+endif # NET_DSA
+
 if PINMUX_MCUX
 
 config PINMUX_MCUX_PORTA
