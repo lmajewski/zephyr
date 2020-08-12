@@ -5,4 +5,4 @@ cmake_minimum_required(VERSION 3.13.1)
 find_package(Zephyr HINTS $ENV{ZEPHYR_BASE})
 project(dsa)
 
-target_sources(app PRIVATE src/main.c src/udpload.c)
+target_sources(app PRIVATE src/main.c src/udpload.c src/ethsupervision.c)
