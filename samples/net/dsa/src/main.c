@@ -10,20 +10,49 @@ LOG_MODULE_REGISTER(net_dsa_sample, LOG_LEVEL_DBG);
 #include <net/dsa.h>
 #include "main.h"
 
+/* Setting MAC address for LAN1,2,3 ports in user program */
+static uint8_t sec_addr[6] = {
+	0x00, 0x19, 0x05, 0x00, 0x00, 0x00 };
+
+static void dsa_set_lan_mac(struct net_if *iface)
+{
+	int ret = net_if_down(iface);
+	if (ret) {
+		LOG_INF("iface %p down error [%d]", iface, ret);
+		return;
+	}
+
+	ret = net_if_set_link_addr(iface, sec_addr, sizeof(sec_addr),
+				   NET_LINK_ETHERNET);
+	if (ret) {
+		LOG_INF("iface %p setting mac addr error [%d]", iface, ret);
+		return;
+	}
+
+	ret = net_if_up(iface);
+	if (ret) {
+		LOG_INF("iface %p up error [%d]", iface, ret);
+		return;
+	}
+}
+
 static void dsa_slave_port_setup(struct net_if *iface, struct ud *ifaces)
 {
 	struct dsa_context *context = net_if_get_device(iface)->data;
 
 	if (ifaces->lan1 == NULL) {
 		ifaces->lan1 = context->iface_slave[1];
+		dsa_set_lan_mac(ifaces->lan1);
 	}
 
 	if (ifaces->lan2 == NULL) {
 		ifaces->lan2 = context->iface_slave[2];
+		dsa_set_lan_mac(ifaces->lan2);
 	}
 
 	if (ifaces->lan3 == NULL) {
 		ifaces->lan3 = context->iface_slave[3];
+		dsa_set_lan_mac(ifaces->lan3);
 	}
 }
 
