@@ -1101,7 +1101,33 @@ static int flash_stm32_qspi_init(const struct device *dev)
 #endif /* CONFIG_FLASH_PAGE_LAYOUT */
 
 	LOG_INF("Device %s initialized", DEV_NAME(dev));
+#if 0
+	//--------------- will be removed ---------
+	printf("----- \n\n");
+	#define TABS 128
+	uint8_t tab[TABS], tabr[TABS];
+	int j = 0xFF;
+	for (int i = 0; i < TABS; i++)
+		tab[i] = j--;
 
+	for (int i = 0; i < TABS; i += 4) {
+		printf("0x%02x 0x%02x 0x%02x 0x%02x\n",
+		       tab[i], tab[i+1], tab[i+2], tab[i+3]);
+	}
+#if 0
+	flash_stm32_qspi_erase(dev, 0x1000000, 0x1000);
+	flash_stm32_qspi_write(dev, 0x1000000, tab, sizeof(tab));
+#endif
+	flash_stm32_qspi_read(dev, 0x1000000, tabr, sizeof(tabr));
+
+	printf("\n\n");
+	for (int i = 0; i < TABS; i += 4) {
+		printf("0x%02x 0x%02x 0x%02x 0x%02x\n",
+		       tabr[i], tabr[i+1], tabr[i+2], tabr[i+3]);
+	}
+
+	while(1);
+#endif
 	return 0;
 }
 
