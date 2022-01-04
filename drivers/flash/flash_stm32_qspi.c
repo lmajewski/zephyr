@@ -772,8 +772,7 @@ static int qspi_program_quad_io(const struct device *dev)
 
 	/* Quit early when QE bit is already set */
 	if (reg & SPI_NOR_QE_BIT) {
-		LOG_INF("Flash - QUAD mode enabled [SR:0x%02x]", reg);
-		return 0;
+		goto out;
 	}
 
 	ret = qspi_write_enable(dev);
@@ -803,6 +802,7 @@ static int qspi_program_quad_io(const struct device *dev)
 		return -EIO;
 	}
 
+ out:
 	LOG_INF("Flash - QUAD mode enabled [SR:0x%02x]", reg);
 	data->flag_quad_io_en = true;
 
@@ -890,6 +890,10 @@ static int spi_nor_process_bfp(const struct device *dev,
 
 			data->qspi_read_cmd = res.instr;
 			data->qspi_read_cmd_latency = res.wait_states;
+			if (res.mode_clocks) {
+				data->qspi_read_cmd_latency +=
+					res.mode_clocks;
+			}
 		}
 	}
 
