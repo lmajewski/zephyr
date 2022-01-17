@@ -74,6 +74,51 @@ static int lsdir(const char *path)
 	return res;
 }
 
+static int littlefs_increase_infile_value(char *fname)
+{
+	uint8_t boot_count = 0;
+	struct fs_file_t file;
+	int rc;
+
+	fs_file_t_init(&file);
+	rc = fs_open(&file, fname, FS_O_CREATE | FS_O_RDWR);
+	if (rc < 0) {
+		LOG_ERR("FAIL: open %s: %d", log_strdup(fname), rc);
+		return rc;
+	}
+
+	rc = fs_read(&file, &boot_count, sizeof(boot_count));
+	if (rc < 0) {
+		LOG_ERR("FAIL: read %s: [rd:%d]", log_strdup(fname), rc);
+		return rc;
+	}
+	LOG_PRINTK("%s read count:%u (bytes: %d)\n", fname, boot_count, rc);
+
+	rc = fs_seek(&file, 0, FS_SEEK_SET);
+	if (rc < 0) {
+		LOG_ERR("FAIL: seek %s: %d", log_strdup(fname), rc);
+		return rc;
+	}
+
+	boot_count += 1;
+	rc = fs_write(&file, &boot_count, sizeof(boot_count));
+	if (rc < 0) {
+		LOG_ERR("FAIL: write %s: %d", log_strdup(fname), rc);
+		return rc;
+	}
+
+	LOG_PRINTK("%s write new boot count %u: [wr:%d]\n", fname,
+		   boot_count, rc);
+
+	rc = fs_close(&file);
+	if (rc < 0) {
+		LOG_ERR("FAIL: close %s: %d", log_strdup(fname), rc);
+		return rc;
+	}
+
+	return 0;
+}
+
 void main(void)
 {
 	struct fs_mount_t *mp =
@@ -137,35 +182,13 @@ void main(void)
 		   sbuf.f_bsize, sbuf.f_frsize,
 		   sbuf.f_blocks, sbuf.f_bfree);
 
-	struct fs_file_t file;
+	lsdir(mp->mnt_point);
 
-	fs_file_t_init(&file);
-
-	rc = fs_open(&file, fname, FS_O_CREATE | FS_O_RDWR);
-	if (rc < 0) {
-		LOG_PRINTK("FAIL: open %s: %d\n", fname, rc);
+	rc = littlefs_increase_infile_value(fname);
+	if (rc) {
 		goto out;
 	}
 
-	uint32_t boot_count = 0;
-
-	if (rc >= 0) {
-		rc = fs_read(&file, &boot_count, sizeof(boot_count));
-		LOG_PRINTK("%s read count %u: %d\n", fname, boot_count, rc);
-		rc = fs_seek(&file, 0, FS_SEEK_SET);
-		LOG_PRINTK("%s seek start: %d\n", fname, rc);
-
-	}
-
-	boot_count += 1;
-	rc = fs_write(&file, &boot_count, sizeof(boot_count));
-	LOG_PRINTK("%s write new boot count %u: %d\n", fname,
-		   boot_count, rc);
-
-	rc = fs_close(&file);
-	LOG_PRINTK("%s close: %d\n", fname, rc);
-
-	lsdir(mp->mnt_point);
 out:
 	rc = fs_unmount(mp);
 	LOG_PRINTK("%s unmount: %d\n", mp->mnt_point, rc);
