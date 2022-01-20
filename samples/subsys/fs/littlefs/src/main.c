@@ -78,26 +78,27 @@ static int littlefs_increase_infile_value(char *fname)
 	rc = fs_read(&file, &boot_count, sizeof(boot_count));
 	if (rc < 0) {
 		LOG_ERR("FAIL: read %s: [rd:%d]", log_strdup(fname), rc);
-		return rc;
+		goto out;
 	}
 	LOG_PRINTK("%s read count:%u (bytes: %d)\n", fname, boot_count, rc);
 
 	rc = fs_seek(&file, 0, FS_SEEK_SET);
 	if (rc < 0) {
 		LOG_ERR("FAIL: seek %s: %d", log_strdup(fname), rc);
-		return rc;
+		goto out;
 	}
 
 	boot_count += 1;
 	rc = fs_write(&file, &boot_count, sizeof(boot_count));
 	if (rc < 0) {
 		LOG_ERR("FAIL: write %s: %d", log_strdup(fname), rc);
-		return rc;
+		goto out;
 	}
 
 	LOG_PRINTK("%s write new boot count %u: [wr:%d]\n", fname,
 		   boot_count, rc);
 
+ out:
 	rc = fs_close(&file);
 	if (rc < 0) {
 		LOG_ERR("FAIL: close %s: %d", log_strdup(fname), rc);
