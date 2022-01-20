@@ -187,7 +187,7 @@ static int littlefs_binary_file_adj(char *fname)
 	rc = fs_stat(fname, &dirent);
 	if (rc < 0) {
 		LOG_ERR("FAIL: stat %s: %d", log_strdup(fname), rc);
-		return rc;
+		goto out;
 	}
 
 	/* Check if the file exists - if not just write the pattern */
@@ -201,7 +201,7 @@ static int littlefs_binary_file_adj(char *fname)
 		if (rc < 0) {
 			LOG_ERR("FAIL: read %s: [rd:%d]",
 				log_strdup(fname), rc);
-			return rc;
+			goto out;
 		}
 		incr_pattern(file_test_pattern, sizeof(file_test_pattern), 0x1);
 	}
@@ -212,15 +212,15 @@ static int littlefs_binary_file_adj(char *fname)
 	rc = fs_seek(&file, 0, FS_SEEK_SET);
 	if (rc < 0) {
 		LOG_ERR("FAIL: seek %s: %d", log_strdup(fname), rc);
-		return rc;
+		goto out;
 	}
 
 	rc = fs_write(&file, file_test_pattern, sizeof(file_test_pattern));
 	if (rc < 0) {
 		LOG_ERR("FAIL: write %s: %d", log_strdup(fname), rc);
-		return rc;
 	}
 
+ out:
 	rc = fs_close(&file);
 	if (rc < 0) {
 		LOG_ERR("FAIL: close %s: %d", log_strdup(fname), rc);
