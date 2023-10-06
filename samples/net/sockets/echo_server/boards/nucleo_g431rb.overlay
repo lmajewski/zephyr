@@ -1,0 +1,29 @@
+/*
+ * Copyright (c) 2023 DENX Software Engineering GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+&spi1 {
+      eth0: lan865x@0{
+		compatible = "microchip,lan865x";
+		reg = <0>;
+
+		int-gpios = <&arduino_header 13 GPIO_ACTIVE_LOW>; /* D7 */
+		rst-gpios = <&arduino_header 14 GPIO_ACTIVE_LOW>; /* D8 */
+
+		local-mac-address = [00 19 05 00 00 01];
+
+		spi-max-frequency = <25000000>;
+
+                /* PLCA settings */
+                plca-enable;
+                plca-node-id = <1>;
+                plca-node-count = <8>;
+                plca-burst-count = <0x0>;
+                plca-burst-timer = <0x80>;
+                plca-to-timer = <0x20>;
+
+		status = "okay";
+	};
+};
