@@ -69,8 +69,9 @@ struct lan865x_data {
 	bool iface_initialized;
 	bool reset;
 
-	K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_ETH_LAN865X_IRQ_THREAD_STACK_SIZE);
-	struct k_thread thread;
+	K_KERNEL_STACK_MEMBER(thd_int_stack, CONFIG_ETH_LAN865X_IRQ_THREAD_STACK_SIZE);
+	struct k_thread thd_int;
+
 	k_tid_t tid_int;
 };
 

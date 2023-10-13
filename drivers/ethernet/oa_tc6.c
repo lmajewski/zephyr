@@ -9,6 +9,8 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(oa_tc6, CONFIG_ETHERNET_LOG_LEVEL);
 
+NET_BUF_POOL_FIXED_DEFINE(oa_tc6_pool_tx, CONFIG_OA_TC6_TX_POOL_SIZE, 64, \
+                          OA_TC6_HDR_SIZE, NULL);
 int oa_tc6_reg_read(struct oa_tc6 *tc6, const uint32_t reg, uint32_t *val)
 {
 	uint8_t buf[OA_TC6_HDR_SIZE + 12] = { 0 };
@@ -160,12 +162,49 @@ int oa_tc6_set_protected_ctrl(struct oa_tc6 *tc6, bool prote)
 	return 0;
 }
 
+static void oa_tc6_rxtx(struct oa_tc6 *tc6)
+{
+	struct net_buf *tx;
+	uint32_t hdr, ftr;
+	int ret;
+
+	while (true) {
+		tx = net_buf_get(&tc6->tx_fifo, K_FOREVER);
+		memcpy(&hdr, tx->user_data, tx->user_data_size);
+
+		ret = oa_tc6_chunk_spi_transfer(tc6, NULL, tx->data, hdr, &ftr);
+		if (ret < 0) {
+			LOG_ERR("OA RXTX: SPI transmission error!");
+		}
+
+		net_buf_unref(tx);
+	}
+}
+
+int oa_tc6_init(struct oa_tc6 *tc6)
+{
+	k_fifo_init(&tc6->rx_fifo);
+	k_fifo_init(&tc6->tx_fifo);
+
+	/* Start RX/TX thread */
+	tc6->tid_rxtx =
+		k_thread_create(&tc6->rxtx, tc6->rxtx_stack,
+				CONFIG_OA_TC6_RXTX_THREAD_STACK_SIZE,
+				(k_thread_entry_t)oa_tc6_rxtx,
+				(void *)tc6, NULL, NULL,
+				K_PRIO_COOP(CONFIG_OA_TC6_RXTX_THREAD_PRIO),
+				0, K_NO_WAIT);
+	k_thread_name_set(tc6->tid_rxtx, "oa_tc6_rxtx");
+
+	return 0;
+}
+
 int oa_tc6_send_chunks(struct oa_tc6 *tc6, struct net_pkt *pkt)
 {
 	uint16_t len = net_pkt_get_len(pkt);
-	uint8_t oa_tx[tc6->cps];
-	uint32_t hdr, ftr;
+	struct net_buf *buf;
 	uint8_t chunks, i;
+	uint32_t hdr;
 	int ret;
 
 	chunks = (len / tc6->cps) + 1;
@@ -176,7 +215,13 @@ int oa_tc6_send_chunks(struct oa_tc6 *tc6, struct net_pkt *pkt)
 	}
 
 	/* Transform struct net_pkt content into chunks */
-	for (i = 1; i <= chunks; i++) {
+	for (i = 1; i <= chunks; i++, len -= tc6->cps) {
+		buf = net_buf_alloc(&oa_tc6_pool_tx, OA_TC6_BUF_ALLOC_TIMEOUT);
+		if (!buf) {
+			LOG_ERR("OA RX: Can't allocate RT buffer fordata!");
+			return -ENOMEM;
+		}
+
 		hdr = FIELD_PREP(OA_DATA_HDR_DNC, 1) |
 			FIELD_PREP(OA_DATA_HDR_DV, 1) |
 			FIELD_PREP(OA_DATA_HDR_NORX, 1) |
@@ -193,17 +238,21 @@ int oa_tc6_send_chunks(struct oa_tc6 *tc6, struct net_pkt *pkt)
 
 		hdr |= FIELD_PREP(OA_DATA_HDR_P, oa_tc6_get_parity(hdr));
 
-		ret = net_pkt_read(pkt, oa_tx, len > tc6->cps ? tc6->cps : len);
+		buf->len = len > tc6->cps ? tc6->cps : len;
+		/*
+		 * One needs to use net_pkt_read() as net stack can form packet
+		 * from many "frags" with different sizes (and hence one cannot
+		 * use this data as an underlaying continous buffer).
+		 */
+		ret = net_pkt_read(pkt, buf->data, buf->len);
 		if (ret < 0) {
 			return ret;
 		}
 
-		ret = oa_tc6_chunk_spi_transfer(tc6, NULL, oa_tx, hdr, &ftr);
-		if (ret < 0) {
-			return ret;
-		}
+		/* The header word is passed with buffer */
+		memcpy(buf->user_data, &hdr, buf->user_data_size);
 
-		len -= tc6->cps;
+		net_buf_put(&tc6->tx_fifo, buf);
 	}
 
 	return 0;

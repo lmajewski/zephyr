@@ -478,7 +478,7 @@ static int lan865x_init(const struct device *dev)
 
 	/* Start interruption-poll thread */
 	ctx->tid_int =
-		k_thread_create(&ctx->thread, ctx->thread_stack,
+		k_thread_create(&ctx->thd_int, ctx->thd_int_stack,
 				CONFIG_ETH_LAN865X_IRQ_THREAD_STACK_SIZE,
 				(k_thread_entry_t)lan865x_int_thread,
 				(void *)dev, NULL, NULL,
@@ -486,6 +486,7 @@ static int lan865x_init(const struct device *dev)
 				0, K_NO_WAIT);
 	k_thread_name_set(ctx->tid_int, "lan865x_interrupt");
 
+	oa_tc6_init(ctx->tc6);
 	ctx->reset = false;
 
 	/* Perform HW reset - 'rst-gpios' required property set in DT */

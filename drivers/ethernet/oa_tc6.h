@@ -104,6 +104,15 @@ struct oa_tc6 {
 
 	/** Indication of protected control transmission mode */
 	bool protected;
+
+	/** OA TC6 SPI transmission thread members */
+	K_KERNEL_STACK_MEMBER(rxtx_stack, CONFIG_OA_TC6_RXTX_THREAD_STACK_SIZE);
+	struct k_thread rxtx;
+	k_tid_t tid_rxtx;
+
+	/** RX and TX FIFOs */
+	struct k_fifo rx_fifo;
+	struct k_fifo tx_fifo;
 };
 
 typedef struct {
@@ -227,4 +236,13 @@ int oa_tc6_read_status(struct oa_tc6 *tc6, uint32_t *ftr);
  * @return 0 if successful, <0 otherwise.
  */
 int oa_tc6_update_buf_info(struct oa_tc6 *tc6);
+
+/**
+ * @brief Initialize OA TC6 driver
+ *
+ * @param tc6 OA TC6 specific data
+ *
+ * @return 0 if successful, <0 otherwise.
+ */
+int oa_tc6_init(struct oa_tc6 *tc6);
 #endif /* OA_TC6_CFG_H__ */
