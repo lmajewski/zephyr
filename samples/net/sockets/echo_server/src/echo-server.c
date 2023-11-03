@@ -21,6 +21,8 @@ LOG_MODULE_REGISTER(net_echo_server_sample, LOG_LEVEL_DBG);
 #include <zephyr/net/net_mgmt.h>
 #include <zephyr/net/net_event.h>
 #include <zephyr/net/conn_mgr_monitor.h>
+#include <zephyr/net/ethernet.h>
+#include <zephyr/net/ethernet_mgmt.h>
 
 #include "common.h"
 #include "certificate.h"
@@ -119,6 +121,25 @@ static void event_handler(struct net_mgmt_event_callback *cb,
 	}
 }
 
+static const uint8_t mac_addr_change[6] = { 0xAA, 0xBB, 0xCC,
+					 0x01,  0x02,  0x03 };
+static int init_macaddr(void)
+{
+	struct ethernet_req_params params;
+	struct net_if *iface = net_if_get_default();
+	int ret;
+
+	net_if_down(iface);
+	memcpy(params.mac_address.addr, mac_addr_change, 6);
+
+	ret = net_mgmt(NET_REQUEST_ETHERNET_SET_MAC_ADDRESS,
+	               iface, &params,
+	               sizeof(struct ethernet_req_params));
+	net_if_up(iface);
+
+	return ret;
+}
+
 static void init_app(void)
 {
 #if defined(CONFIG_USERSPACE)
@@ -198,6 +219,7 @@ static void init_app(void)
 	init_tunnel();
 
 	init_usb();
+	init_macaddr();
 }
 
 static int cmd_sample_quit(const struct shell *sh,
