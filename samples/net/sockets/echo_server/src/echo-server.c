@@ -121,6 +121,33 @@ static void event_handler(struct net_mgmt_event_callback *cb,
 	}
 }
 
+static int init_t1s_plca(void)
+{
+	struct ethernet_req_params params = {
+		.t1s_param.type = ETHERNET_T1S_PARAM_TYPE_PLCA_CONFIG,
+		.t1s_param.plca.enable = true,
+		.t1s_param.plca.node_id = 2,
+		.t1s_param.plca.node_count = 8,
+		.t1s_param.plca.burst_count = 0,
+		.t1s_param.plca.burst_timer = 0x80,
+		.t1s_param.plca.to_timer = 0x20,
+	};
+	struct net_if *iface = net_if_get_default();
+	int ret;
+
+	net_if_down(iface);
+	ret = net_mgmt(NET_REQUEST_ETHERNET_SET_T1S_PARAM,
+	               iface,
+	               &params, sizeof(struct ethernet_req_params));
+	if (ret) {
+		LOG_ERR("Cannot configure T1S parameters!");
+		return ret;
+	}
+	net_if_up(iface);
+
+	return ret;
+};
+
 static const uint8_t mac_addr_change[6] = { 0xAA, 0xBB, 0xCC,
 					 0x01,  0x02,  0x03 };
 static int init_macaddr(void)
@@ -220,6 +247,7 @@ static void init_app(void)
 
 	init_usb();
 	init_macaddr();
+	init_t1s_plca();
 }
 
 static int cmd_sample_quit(const struct shell *sh,
