@@ -167,6 +167,19 @@ int oa_tc6_set_protected_ctrl(struct oa_tc6 *tc6, bool prote)
 	return 0;
 }
 
+int oa_tc6_trigger_rx(struct oa_tc6 *tc6)
+{
+	k_sem_give(tc6->irq_sem);
+	return 0;
+}
+
+int oa_tc6_init(struct oa_tc6 *tc6, struct k_sem *irq_sem)
+{
+	k_sem_init(&tc6->tx_rx_sem, 1, 1);
+	tc6->irq_sem = irq_sem;
+	return 0;
+}
+
 int oa_tc6_send_chunks(struct oa_tc6 *tc6, struct net_pkt *pkt)
 {
 	uint16_t len = net_pkt_get_len(pkt);
@@ -213,7 +226,17 @@ int oa_tc6_send_chunks(struct oa_tc6 *tc6, struct net_pkt *pkt)
 		}
 
 		ret = oa_tc6_spi_transfer(tc6, NULL, oa_tx, hdr, &ftr);
-		if (ret < 0) {
+		if (ret == 0 && tc6->tx) {
+			if(!WAIT_FOR(tc6->tx == NULL, OA_TC6_TX_TIMEOUT,
+				     k_usleep(1))) {
+				/* Timeout, restore default condition */
+				LOG_WRN("TX deferred - timeout (%d [us])!",
+					OA_TC6_TX_TIMEOUT);
+				tc6->tx = NULL;
+
+				return -EIO;
+			}
+		} else if (ret < 0) {
 			return ret;
 		}
 
@@ -310,7 +333,45 @@ static int oa_tc6_chunk_spi_transfer(struct oa_tc6 *tc6, uint8_t *buf_rx,
 int oa_tc6_spi_transfer(struct oa_tc6 *tc6, uint8_t *buf_rx, uint8_t *buf_tx,
 			uint32_t hdr, uint32_t *ftr)
 {
-	return oa_tc6_chunk_spi_transfer(tc6, buf_rx, buf_tx, hdr, ftr);
+	int ret = 0;
+
+	k_sem_take(&tc6->tx_rx_sem, K_FOREVER);
+
+	if (buf_rx == NULL) {
+		if (tc6->rca == 0) {
+			/*
+			 * Half-duplex TX
+			 * - send data when no data ready for reading
+			 */
+			ret = oa_tc6_chunk_spi_transfer(tc6, buf_rx, buf_tx,
+							hdr, ftr);
+			goto unlock;
+		} else {
+			/* Prepare data to be send during next RX transfer */
+			tc6->tx = buf_tx;
+			oa_tc6_trigger_rx(tc6);
+
+			k_sem_give(&tc6->tx_rx_sem);
+
+			return 0;
+		}
+	}
+
+	if (tc6->tx == NULL) {
+		/* Half-duplex RX - no data for TX */
+		ret = oa_tc6_chunk_spi_transfer(tc6, buf_rx, buf_tx, hdr, ftr);
+		goto unlock;
+	}
+
+	/* Full-duplex RX/TX */
+	ret = oa_tc6_chunk_spi_transfer(tc6, buf_rx, tc6->tx, hdr, ftr);
+
+	/* Notify TX path, that data has been sent during read */
+	tc6->tx = NULL;
+ unlock:
+	k_sem_give(&tc6->tx_rx_sem);
+
+	return ret;
 }
 
 int oa_tc6_read_status(struct oa_tc6 *tc6, uint32_t *ftr)

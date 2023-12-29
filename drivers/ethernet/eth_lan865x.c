@@ -401,12 +401,10 @@ static void lan865x_read_chunks(const struct device *dev)
 		return;
 	}
 
-	k_sem_take(&ctx->tx_rx_sem, K_FOREVER);
 	ret = oa_tc6_read_chunks(tc6, pkt);
 	if (ret < 0) {
 		eth_stats_update_errors_rx(ctx->iface);
 		net_pkt_unref(pkt);
-		k_sem_give(&ctx->tx_rx_sem);
 		return;
 	}
 
@@ -416,7 +414,6 @@ static void lan865x_read_chunks(const struct device *dev)
 		LOG_ERR("OA RX: Could not process packet (%d)!", ret);
 		net_pkt_unref(pkt);
 	}
-	k_sem_give(&ctx->tx_rx_sem);
 }
 
 static void lan865x_int_thread(const struct device *dev)
@@ -536,6 +533,7 @@ static int lan865x_init(const struct device *dev)
 		return ret;
 	}
 
+	oa_tc6_init(ctx->tc6, &ctx->int_sem);
 	return lan865x_gpio_reset(dev);
 }
 
@@ -545,15 +543,7 @@ static int lan865x_port_send(const struct device *dev, struct net_pkt *pkt)
 	struct oa_tc6 *tc6 = ctx->tc6;
 	int ret;
 
-	k_sem_take(&ctx->tx_rx_sem, K_FOREVER);
 	ret = oa_tc6_send_chunks(tc6, pkt);
-
-	/* Check if rca > 0 during half-duplex TX transmission */
-	if (tc6->rca > 0) {
-		k_sem_give(&ctx->int_sem);
-	}
-
-	k_sem_give(&ctx->tx_rx_sem);
 	if (ret < 0) {
 		LOG_ERR("TX transmission error, %d", ret);
 		eth_stats_update_errors_tx(net_pkt_iface(pkt));
@@ -595,8 +585,6 @@ static const struct ethernet_api lan865x_api_func = {
 	};                                                                                         \
 	static struct lan865x_data lan865x_data_##inst = {                                         \
 		.mac_address = DT_INST_PROP(inst, local_mac_address),                              \
-		.tx_rx_sem =                                                                       \
-			Z_SEM_INITIALIZER((lan865x_data_##inst).tx_rx_sem, 1, 1),                  \
 		.int_sem = Z_SEM_INITIALIZER((lan865x_data_##inst).int_sem, 0, 1),                 \
 		.tc6 = &oa_tc6_##inst                                                              \
 	};                                                                                         \

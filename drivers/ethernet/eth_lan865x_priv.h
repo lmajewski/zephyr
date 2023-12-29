@@ -64,7 +64,6 @@ struct lan865x_config {
 struct lan865x_data {
 	struct net_if *iface;
 	struct gpio_callback gpio_int_callback;
-	struct k_sem tx_rx_sem;
 	struct k_sem int_sem;
 	struct oa_tc6 *tc6;
 	uint16_t chip_id;

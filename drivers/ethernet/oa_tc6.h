@@ -77,6 +77,7 @@
 #define OA_TC6_HDR_SIZE		      4
 #define OA_TC6_FTR_SIZE		      4
 #define OA_TC6_BUF_ALLOC_TIMEOUT      K_MSEC(10)
+#define OA_TC6_TX_TIMEOUT	      200000U
 #define OA_TC6_FTR_RCA_MAX	      GENMASK(4, 0)
 #define OA_TC6_FTR_TXC_MAX	      GENMASK(4, 0)
 
@@ -110,6 +111,15 @@ struct oa_tc6 {
 
 	/** Pointer to network buffer concatenated from received chunk */
 	struct net_buf *concat_buf;
+
+	/** Semaphore for SPI (RX/TX) transmission */
+	struct k_sem tx_rx_sem;
+
+	/** Pointer to semaphore for OA TC6 IRQ handler function */
+	struct k_sem *irq_sem;
+
+	/** Pointer to TX buffer (CPS size) to be send during RX operation */
+	uint8_t *tx;
 };
 
 typedef struct {
@@ -249,4 +259,25 @@ int oa_tc6_reg_rmw(struct oa_tc6 *tc6, const uint32_t reg,
  * @return 0 if successful, <0 otherwise.
  */
 int oa_tc6_check_status(struct oa_tc6 *tc6);
+
+/**
+ * @brief Trigger RX transmission on OA TC6 device
+ *
+ * @param tc6 OA TC6 specific data
+ *
+ * @return 0 if successful, <0 otherwise.
+ */
+int oa_tc6_trigger_rx(struct oa_tc6 *tc6);
+
+/**
+ * @brief Initialize OA TC6 driver
+ *
+ * @param tc6 OA TC6 specific data
+ *
+ * @param irq_sem pointer to OA TC6 irq handling semaphore
+ *
+ * @return 0 if successful, <0 otherwise.
+ */
+int oa_tc6_init(struct oa_tc6 *tc6, struct k_sem *irq_sem);
+
 #endif /* OA_TC6_CFG_H__ */
