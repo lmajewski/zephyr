@@ -212,7 +212,7 @@ int oa_tc6_send_chunks(struct oa_tc6 *tc6, struct net_pkt *pkt)
 			return ret;
 		}
 
-		ret = oa_tc6_chunk_spi_transfer(tc6, NULL, oa_tx, hdr, &ftr);
+		ret = oa_tc6_spi_transfer(tc6, NULL, oa_tx, hdr, &ftr);
 		if (ret < 0) {
 			return ret;
 		}
@@ -269,8 +269,9 @@ static int oa_tc6_update_status(struct oa_tc6 *tc6, uint32_t ftr)
 	return 0;
 }
 
-int oa_tc6_chunk_spi_transfer(struct oa_tc6 *tc6, uint8_t *buf_rx, uint8_t *buf_tx,
-				     uint32_t hdr, uint32_t *ftr)
+static int oa_tc6_chunk_spi_transfer(struct oa_tc6 *tc6, uint8_t *buf_rx,
+				     uint8_t *buf_tx, uint32_t hdr,
+				     uint32_t *ftr)
 {
 	struct spi_buf tx_buf[2];
 	struct spi_buf rx_buf[2];
@@ -304,6 +305,12 @@ int oa_tc6_chunk_spi_transfer(struct oa_tc6 *tc6, uint8_t *buf_rx, uint8_t *buf_
 	*ftr = sys_be32_to_cpu(*ftr);
 
 	return oa_tc6_update_status(tc6, *ftr);
+}
+
+int oa_tc6_spi_transfer(struct oa_tc6 *tc6, uint8_t *buf_rx, uint8_t *buf_tx,
+			uint32_t hdr, uint32_t *ftr)
+{
+	return oa_tc6_chunk_spi_transfer(tc6, buf_rx, buf_tx, hdr, ftr);
 }
 
 int oa_tc6_read_status(struct oa_tc6 *tc6, uint32_t *ftr)
@@ -344,7 +351,7 @@ int oa_tc6_read_chunks(struct oa_tc6 *tc6, struct net_pkt *pkt)
 		hdr = FIELD_PREP(OA_DATA_HDR_DNC, 1);
 		hdr |= FIELD_PREP(OA_DATA_HDR_P, oa_tc6_get_parity(hdr));
 
-		ret = oa_tc6_chunk_spi_transfer(tc6, buf_rx->data, NULL, hdr, &ftr);
+		ret = oa_tc6_spi_transfer(tc6, buf_rx->data, NULL, hdr, &ftr);
 		if (ret < 0) {
 			LOG_ERR("OA RX: transmission error: %d!", ret);
 			goto unref_buf;

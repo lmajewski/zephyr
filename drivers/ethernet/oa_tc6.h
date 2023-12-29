@@ -197,7 +197,7 @@ int oa_tc6_send_chunks(struct oa_tc6 *tc6, struct net_pkt *pkt);
 int oa_tc6_read_chunks(struct oa_tc6 *tc6, struct net_pkt *pkt);
 
 /**
- * @brief Perform SPI transfer of single chunk from/to OA TC6 device
+ * @brief Perform SPI transfer from/to OA TC6 device
  *
  * @param tc6 OA TC6 specific data
  *
@@ -211,8 +211,8 @@ int oa_tc6_read_chunks(struct oa_tc6 *tc6, struct net_pkt *pkt);
  *
  * @return 0 if transmission was successful, <0 otherwise.
  */
-int oa_tc6_chunk_spi_transfer(struct oa_tc6 *tc6, uint8_t *buf_rx, uint8_t *buf_tx,
-			      uint32_t hdr, uint32_t *ftr);
+int oa_tc6_spi_transfer(struct oa_tc6 *tc6, uint8_t *buf_rx, uint8_t *buf_tx,
+			uint32_t hdr, uint32_t *ftr);
 
 /**
  * @brief Read status from OA TC6 device
