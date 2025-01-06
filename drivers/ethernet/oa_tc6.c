@@ -191,6 +191,7 @@ static int oa_tc6_get_phy_c45_mms(int devad)
 int oa_tc6_mdio_read_c45(struct oa_tc6 *tc6, uint8_t prtad, uint8_t devad, uint16_t regad,
 			 uint16_t *data)
 {
+	uint32_t tmp;
 	int ret;
 
 	ret = oa_tc6_get_phy_c45_mms(devad);
@@ -198,7 +199,14 @@ int oa_tc6_mdio_read_c45(struct oa_tc6 *tc6, uint8_t prtad, uint8_t devad, uint1
 		return ret;
 	}
 
-	return oa_tc6_reg_read(tc6, (ret << 16) | regad, (uint32_t *)data);
+	ret = oa_tc6_reg_read(tc6, (ret << 16) | regad, &tmp);
+	if (ret < 0) {
+		return ret;
+	}
+
+	*data = (uint16_t)tmp;
+
+	return 0;
 }
 
 int oa_tc6_mdio_write_c45(struct oa_tc6 *tc6, uint8_t prtad, uint8_t devad, uint16_t regad,
